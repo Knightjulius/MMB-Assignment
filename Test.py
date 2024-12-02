@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np 
 import random
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -63,6 +63,8 @@ def morse_potential(x1, y1, x2, y2, type1, type2):
 # Function to update the grid based on interaction rules
 def update_grid(grid):
     new_grid = grid.copy()
+    
+    # Loop through all cells on the grid
     for x in range(GRID_SIZE[0]):
         for y in range(GRID_SIZE[1]):
             if grid[x, y] != EMPTY:
@@ -84,6 +86,30 @@ def update_grid(grid):
                 if new_grid[new_x, new_y] == EMPTY:
                     new_grid[new_x, new_y] = grid[x, y]
                     new_grid[x, y] = EMPTY
+                
+                # Implement differentiation and death rules here
+                if grid[x, y] == MELANOPHORE:
+                    # Cell death condition for melanophores: too many xanthophores nearby
+                    nearby_xanthophores = np.sum(grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)] == XANTHOPHORE)
+                    if nearby_xanthophores > 3:  # Threshold for melanophore death
+                        new_grid[x, y] = EMPTY
+                
+                elif grid[x, y] == XANTHOPHORE:
+                    # Cell death condition for xanthophores: too many melanophores nearby
+                    nearby_melanophores = np.sum(grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)] == MELANOPHORE)
+                    if nearby_melanophores > 3:  # Threshold for xanthophore death
+                        new_grid[x, y] = EMPTY
+                
+                # Differentiation rule: check for empty spaces
+                if grid[x, y] == EMPTY:
+                    # Randomly select a nearby region and check for conditions for differentiation
+                    nearby_cells = grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)]
+                    if np.random.rand() < 0.1:  # Probability of differentiation
+                        if np.sum(nearby_cells == MELANOPHORE) > np.sum(nearby_cells == XANTHOPHORE):  # More melanophores nearby
+                            new_grid[x, y] = MELANOPHORE
+                        else:
+                            new_grid[x, y] = XANTHOPHORE
+
     return new_grid
 
 # Function to visualize the grid

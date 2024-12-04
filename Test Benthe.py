@@ -128,19 +128,68 @@ cax = ax.imshow(grid, cmap=colors.ListedColormap(['white', 'black', 'yellow']))
 
 # Update function for animation
 def update(frame):
+    """
     global grid
+    
+    # Create a new grid with increased size
+    new_size = (grid.shape[0] + 1, grid.shape[1] + 1)
+    new_grid = np.zeros(new_size, dtype=int)
+    
+    # Copy the existing grid into the new grid
+    new_grid[:grid.shape[0], :grid.shape[1]] = grid
+    
+    # Initialize new row and column
+    # Here, you can decide how to initialize these new cells.
+    # For simplicity, we fill the new row and column with empty cells.
+    # You can add patterns if needed (e.g., random cells or based on rules).
+    new_grid[grid.shape[0], :] = EMPTY  # New row
+    new_grid[:, grid.shape[1]] = EMPTY  # New column
+    
+    # Assign the expanded grid back to `grid`
+    grid = new_grid
+    
+    # Update the grid using the existing update_grid function
     grid = update_grid(grid)  # Update grid at each step
-    cax.set_array(grid)  # Update the grid visualization
+    
+    # Update the plot with the new grid size
+    cax.set_array(grid)
+    cax.set_extent([0, grid.shape[1], 0, grid.shape[0]])
+    
+    #grid = update_grid(grid)  # Update grid at each step
+    #cax.set_array(grid)  # Update the grid visualization
+    return [cax]
+    """
+
+    global grid
+    p = 0.5  # Probability of increasing grid size
+    
+    # Determine whether to expand the grid
+    if np.random.rand() < p:
+        new_size = (grid.shape[0] + 2, grid.shape[1] + 2)
+        new_grid = np.zeros(new_size, dtype=int)
+        
+        # Calculate offsets to center the existing grid
+        row_offset = (new_size[0] - grid.shape[0]) // 2
+        col_offset = (new_size[1] - grid.shape[1]) // 2
+        
+        # Place the existing grid in the middle of the new grid
+        new_grid[row_offset:row_offset + grid.shape[0], col_offset:col_offset + grid.shape[1]] = grid
+        
+        # Assign the expanded grid back to `grid`
+        grid = new_grid
+    
+    # Update the grid using the existing update_grid function
+    grid = update_grid(grid)  # Update grid at each step
+    
+    # Update the plot with the new grid size
+    cax.set_array(grid)
+    cax.set_extent([0, grid.shape[1], 0, grid.shape[0]])  # Update plot extent
     return [cax]
 
 # Create the animation
-ani = animation.FuncAnimation(fig, update, frames=STEPS, interval=5, blit=True)
+ani = animation.FuncAnimation(fig, update, frames=STEPS, interval=200, blit=True)
 
 # Saving the animation
-#writer = FFMpegWriter(fps=30, metadata={'artist': 'Benthe & Julius'}, bitrate=1800)
-#file_path = os.path.join(os.getcwd(), 'zebrafish_stripe_formation.mp4')
-#ani.save(file_path, writer=writer)
-
 script_dir = os.path.dirname(os.path.abspath(__file__))  # Get script directory
 os.chdir(script_dir)  # Change to the script's directory
 

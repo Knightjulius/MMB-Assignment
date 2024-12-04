@@ -26,6 +26,8 @@ AMM = 0.5  # Attraction strength for melanophores
 AXX = 0.5  # Attraction strength for xanthophores
 AXM = 0.5  # Attraction strength for melanophore and xanthophore
 
+GROWTH_FRAMES = 10  # after how many frames the fish grows
+
 # Initialize grid with empty cells
 grid = np.zeros(GRID_SIZE, dtype=int)
 
@@ -126,45 +128,16 @@ grid = initialize_cells(grid)  # Initialize cells
 fig, ax = plt.subplots(figsize=(6, 6))
 cax = ax.imshow(grid, cmap=colors.ListedColormap(['white', 'black', 'yellow']))
 
+number_of_frames = 0
+
 # Update function for animation
 def update(frame):
-    """
     global grid
-    
-    # Create a new grid with increased size
-    new_size = (grid.shape[0] + 1, grid.shape[1] + 1)
-    new_grid = np.zeros(new_size, dtype=int)
-    
-    # Copy the existing grid into the new grid
-    new_grid[:grid.shape[0], :grid.shape[1]] = grid
-    
-    # Initialize new row and column
-    # Here, you can decide how to initialize these new cells.
-    # For simplicity, we fill the new row and column with empty cells.
-    # You can add patterns if needed (e.g., random cells or based on rules).
-    new_grid[grid.shape[0], :] = EMPTY  # New row
-    new_grid[:, grid.shape[1]] = EMPTY  # New column
-    
-    # Assign the expanded grid back to `grid`
-    grid = new_grid
-    
-    # Update the grid using the existing update_grid function
-    grid = update_grid(grid)  # Update grid at each step
-    
-    # Update the plot with the new grid size
-    cax.set_array(grid)
-    cax.set_extent([0, grid.shape[1], 0, grid.shape[0]])
-    
-    #grid = update_grid(grid)  # Update grid at each step
-    #cax.set_array(grid)  # Update the grid visualization
-    return [cax]
-    """
-
-    global grid
-    p = 0.5  # Probability of increasing grid size
+    global number_of_frames 
+    number_of_frames = number_of_frames + 1
     
     # Determine whether to expand the grid
-    if np.random.rand() < p:
+    if number_of_frames >= GROWTH_FRAMES:
         new_size = (grid.shape[0] + 2, grid.shape[1] + 2)
         new_grid = np.zeros(new_size, dtype=int)
         
@@ -177,6 +150,7 @@ def update(frame):
         
         # Assign the expanded grid back to `grid`
         grid = new_grid
+        number_of_frames = 0
     
     # Update the grid using the existing update_grid function
     grid = update_grid(grid)  # Update grid at each step

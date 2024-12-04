@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np  
 import random
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -17,12 +17,12 @@ DXX = 36  # Average distance between xanthophores
 DXM = 82  # Average distance between melanophores and xanthophores at stripe/interstripe boundaries
 
 # Morse potential parameters (example values)
-RMM = 1.0  # Repulsion strength for melanophores
-RXX = 1.0  # Repulsion strength for xanthophores
-RXM = 1.0  # Repulsion strength for melanophore and xanthophore
-AMM = 0.5  # Attraction strength for melanophores
-AXX = 0.5  # Attraction strength for xanthophores
-AXM = 0.5  # Attraction strength for melanophore and xanthophore
+RMM = 0.1  # Repulsion strength for melanophores
+RXX = 0.1  # Repulsion strength for xanthophores
+RXM = 0.1  # Repulsion strength for melanophore and xanthophore
+AMM = 0.05  # Attraction strength for melanophores
+AXX = 0.05  # Attraction strength for xanthophores
+AXM = 0.05  # Attraction strength for melanophore and xanthophore
 
 # Initialize grid with empty cells
 grid = np.zeros(GRID_SIZE, dtype=int)
@@ -39,7 +39,6 @@ def initialize_cells(grid):
     # Rows directly above and below the middle row are melanophores with gaps
     grid[middle_row - 5, ::2] = MELANOPHORE  # Set every other cell in the row above middle row to melanophores
     grid[middle_row + 5, ::2] = MELANOPHORE  # Set every other cell in the row below middle row to melanophores
-    
     return grid
 
 # Morse potential function to calculate the interaction between two cells
@@ -60,56 +59,59 @@ def morse_potential(x1, y1, x2, y2, type1, type2):
     # Morse potential formula
     return R * np.exp(-distance / r) - A * np.exp(-distance / a)
 
-# Function to update the grid based on interaction rules
-def update_grid(grid):
+def update_grid(grid, neighborhood_size=2):
     new_grid = grid.copy()
     
     # Loop through all cells on the grid
     for x in range(GRID_SIZE[0]):
         for y in range(GRID_SIZE[1]):
             if grid[x, y] != EMPTY:
-                # Calculate the net force on each cell based on the Morse potential
-                force_x = 0
-                force_y = 0
-                for i in range(GRID_SIZE[0]):
-                    for j in range(GRID_SIZE[1]):
-                        if (i != x or j != y) and grid[i, j] != EMPTY:
-                            potential = morse_potential(x, y, i, j, grid[x, y], grid[i, j])
-                            force_x += potential * (i - x) / np.sqrt((i - x)**2 + (j - y)**2)
-                            force_y += potential * (j - y) / np.sqrt((i - x)**2 + (j - y)**2)
-                
-                # Move the cell based on the calculated forces (scaled for simplicity)
-                new_x = min(max(0, x + int(force_x * 0.1)), GRID_SIZE[0] - 1)
-                new_y = min(max(0, y + int(force_y * 0.1)), GRID_SIZE[1] - 1)
-                
-                # If the cell moves to a new location, update the grid
-                if new_grid[new_x, new_y] == EMPTY:
-                    new_grid[new_x, new_y] = grid[x, y]
-                    new_grid[x, y] = EMPTY
-                
-                # Implement differentiation and death rules here
+                # Step 1: Check if the cell dies by looking at the majority of opposite type cells in the direct neighborhood
                 if grid[x, y] == MELANOPHORE:
-                    # Cell death condition for melanophores: too many xanthophores nearby
-                    nearby_xanthophores = np.sum(grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)] == XANTHOPHORE)
-                    if nearby_xanthophores > 3:  # Threshold for melanophore death
+                    # Define the neighborhood for the current cell based on neighborhood_size
+                    nearby_xanthophores = np.sum(grid[max(0, x - neighborhood_size):min(GRID_SIZE[0], x + neighborhood_size + 1), 
+                                                     max(0, y - neighborhood_size):min(GRID_SIZE[1], y + neighborhood_size + 1)] == XANTHOPHORE)
+                    if nearby_xanthophores > (2 * neighborhood_size + 1) ** 2 / 2:  # Majority of neighbors are xanthophores
                         new_grid[x, y] = EMPTY
-                
                 elif grid[x, y] == XANTHOPHORE:
-                    # Cell death condition for xanthophores: too many melanophores nearby
-                    nearby_melanophores = np.sum(grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)] == MELANOPHORE)
-                    if nearby_melanophores > 3:  # Threshold for xanthophore death
+                    # Define the neighborhood for the current cell based on neighborhood_size
+                    nearby_melanophores = np.sum(grid[max(0, x - neighborhood_size):min(GRID_SIZE[0], x + neighborhood_size + 1), 
+                                                      max(0, y - neighborhood_size):min(GRID_SIZE[1], y + neighborhood_size + 1)] == MELANOPHORE)
+                    if nearby_melanophores > (2 * neighborhood_size + 1) ** 2 / 2:  # Majority of neighbors are melanophores
                         new_grid[x, y] = EMPTY
                 
-                # Differentiation rule: check for empty spaces
-                if grid[x, y] == EMPTY:
-                    # Randomly select a nearby region and check for conditions for differentiation
-                    nearby_cells = grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)]
-                    if np.random.rand() < 0.1:  # Probability of differentiation
-                        if np.sum(nearby_cells == MELANOPHORE) > np.sum(nearby_cells == XANTHOPHORE):  # More melanophores nearby
-                            new_grid[x, y] = MELANOPHORE
-                        else:
-                            new_grid[x, y] = XANTHOPHORE
+                # Step 2: If the cell does not die, check for movement (based on forces)
+                if new_grid[x, y] != EMPTY:  # Only move non-empty cells
+                    force_x = 0
+                    force_y = 0
+                    for i in range(GRID_SIZE[0]):
+                        for j in range(GRID_SIZE[1]):
+                            if (i != x or j != y) and grid[i, j] != EMPTY:
+                                potential = morse_potential(x, y, i, j, grid[x, y], grid[i, j])
+                                force_x += potential * (i - x) / np.sqrt((i - x)**2 + (j - y)**2)
+                                force_y += potential * (j - y) / np.sqrt((i - x)**2 + (j - y)**2)
+                    
+                    # Move the cell based on the forces
+                    new_x = min(max(0, x + int(force_x * 0.1)), GRID_SIZE[0] - 1)
+                    new_y = min(max(0, y + int(force_y * 0.1)), GRID_SIZE[1] - 1)
+                    
+                    # If the cell moves to a new location, update the grid
+                    if new_grid[new_x, new_y] == EMPTY:
+                        new_grid[new_x, new_y] = grid[x, y]
+                        new_grid[x, y] = EMPTY
 
+            # Step 3: Check empty spaces for differentiation
+            if grid[x, y] == EMPTY:
+                # Define the neighborhood for the current cell based on neighborhood_size
+                nearby_cells = grid[max(0, x - neighborhood_size):min(GRID_SIZE[0], x + neighborhood_size + 1), 
+                                    max(0, y - neighborhood_size):min(GRID_SIZE[1], y + neighborhood_size + 1)]
+                # Condition for melanophore differentiation (more than 2 xanthophores nearby)
+                if np.sum(nearby_cells == XANTHOPHORE) > (2 * neighborhood_size + 1) ** 2 / 2:
+                    new_grid[x, y] = MELANOPHORE
+                # Condition for xanthophore differentiation (more than 2 melanophores nearby)
+                elif np.sum(nearby_cells == MELANOPHORE) > (2 * neighborhood_size + 1) ** 2 / 2:
+                    new_grid[x, y] = XANTHOPHORE
+                
     return new_grid
 
 # Function to visualize the grid

@@ -17,12 +17,12 @@ DXX = 36  # Average distance between xanthophores
 DXM = 82  # Average distance between melanophores and xanthophores at stripe/interstripe boundaries
 
 # Morse potential parameters (example values)
-RMM = 0.1  # Repulsion strength for melanophores
-RXX = 0.1  # Repulsion strength for xanthophores
-RXM = 0.1  # Repulsion strength for melanophore and xanthophore
-AMM = 0.05  # Attraction strength for melanophores
-AXX = 0.05  # Attraction strength for xanthophores
-AXM = 0.05  # Attraction strength for melanophore and xanthophore
+RMM = 1  # Repulsion strength for melanophores
+RXX = 1  # Repulsion strength for xanthophores
+RXM = 1  # Repulsion strength for melanophore and xanthophore
+AMM = 0.5  # Attraction strength for melanophores
+AXX = 0.5  # Attraction strength for xanthophores
+AXM = 0.5  # Attraction strength for melanophore and xanthophore
 
 # Initialize grid with empty cells
 grid = np.zeros(GRID_SIZE, dtype=int)
@@ -39,6 +39,16 @@ def initialize_cells(grid):
     # Rows directly above and below the middle row are melanophores with gaps
     grid[middle_row - 5, ::2] = MELANOPHORE  # Set every other cell in the row above middle row to melanophores
     grid[middle_row + 5, ::2] = MELANOPHORE  # Set every other cell in the row below middle row to melanophores
+    return grid
+
+# Function to initialize cells (randomly place melanophores and xanthophores)
+def initialize_cells(grid, num_melanophores=200, num_xanthophores=200):
+    for _ in range(num_melanophores):
+        x, y = random.randint(0, GRID_SIZE[0]-1), random.randint(0, GRID_SIZE[1]-1)
+        grid[x, y] = MELANOPHORE
+    for _ in range(num_xanthophores):
+        x, y = random.randint(0, GRID_SIZE[0]-1), random.randint(0, GRID_SIZE[1]-1)
+        grid[x, y] = XANTHOPHORE
     return grid
 
 # Morse potential function to calculate the interaction between two cells
@@ -59,29 +69,37 @@ def morse_potential(x1, y1, x2, y2, type1, type2):
     # Morse potential formula
     return R * np.exp(-distance / r) - A * np.exp(-distance / a)
 
-def update_grid(grid, neighborhood_size=2):
+# Function to update the grid based on interaction rules
+def update_grid(grid, differentiation_neighborhood_size=3):
     new_grid = grid.copy()
     
     # Loop through all cells on the grid
     for x in range(GRID_SIZE[0]):
         for y in range(GRID_SIZE[1]):
             if grid[x, y] != EMPTY:
-                # Step 1: Check if the cell dies by looking at the majority of opposite type cells in the direct neighborhood
+                # Death condition for melanophores: majority of direct neighbors are xanthophores
                 if grid[x, y] == MELANOPHORE:
-                    # Define the neighborhood for the current cell based on neighborhood_size
-                    nearby_xanthophores = np.sum(grid[max(0, x - neighborhood_size):min(GRID_SIZE[0], x + neighborhood_size + 1), 
-                                                     max(0, y - neighborhood_size):min(GRID_SIZE[1], y + neighborhood_size + 1)] == XANTHOPHORE)
-                    if nearby_xanthophores > (2 * neighborhood_size + 1) ** 2 / 2:  # Majority of neighbors are xanthophores
-                        new_grid[x, y] = EMPTY
-                elif grid[x, y] == XANTHOPHORE:
-                    # Define the neighborhood for the current cell based on neighborhood_size
-                    nearby_melanophores = np.sum(grid[max(0, x - neighborhood_size):min(GRID_SIZE[0], x + neighborhood_size + 1), 
-                                                      max(0, y - neighborhood_size):min(GRID_SIZE[1], y + neighborhood_size + 1)] == MELANOPHORE)
-                    if nearby_melanophores > (2 * neighborhood_size + 1) ** 2 / 2:  # Majority of neighbors are melanophores
+                    # Get direct neighbors (1 step in all directions)
+                    direct_neighbors = grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)]
+                    # Count the number of xanthophores in the direct neighborhood
+                    nearby_xanthophores = np.sum(direct_neighbors == XANTHOPHORE) - (direct_neighbors[1, 1] == XANTHOPHORE)  # Exclude the current cell
+                    # If the majority of direct neighbors are xanthophores, the melanophore dies
+                    if nearby_xanthophores > 4:  # Threshold for melanophore death (more than 4 xanthophores in the 8 neighbors)
                         new_grid[x, y] = EMPTY
                 
-                # Step 2: If the cell does not die, check for movement (based on forces)
-                if new_grid[x, y] != EMPTY:  # Only move non-empty cells
+                # Death condition for xanthophores: majority of direct neighbors are melanophores
+                elif grid[x, y] == XANTHOPHORE:
+                    # Get direct neighbors (1 step in all directions)
+                    direct_neighbors = grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)]
+                    # Count the number of melanophores in the direct neighborhood
+                    nearby_melanophores = np.sum(direct_neighbors == MELANOPHORE) - (direct_neighbors[1, 1] == MELANOPHORE)  # Exclude the current cell
+                    # If the majority of direct neighbors are melanophores, the xanthophore dies
+                    if nearby_melanophores > 4:  # Threshold for xanthophore death (more than 4 melanophores in the 8 neighbors)
+                        new_grid[x, y] = EMPTY
+                
+                # Only move cells if they are not dead
+                if new_grid[x, y] != EMPTY:
+                    # Calculate the net force on each cell based on the Morse potential
                     force_x = 0
                     force_y = 0
                     for i in range(GRID_SIZE[0]):
@@ -91,7 +109,7 @@ def update_grid(grid, neighborhood_size=2):
                                 force_x += potential * (i - x) / np.sqrt((i - x)**2 + (j - y)**2)
                                 force_y += potential * (j - y) / np.sqrt((i - x)**2 + (j - y)**2)
                     
-                    # Move the cell based on the forces
+                    # Move the cell based on the calculated forces (scaled for simplicity)
                     new_x = min(max(0, x + int(force_x * 0.1)), GRID_SIZE[0] - 1)
                     new_y = min(max(0, y + int(force_y * 0.1)), GRID_SIZE[1] - 1)
                     
@@ -99,20 +117,30 @@ def update_grid(grid, neighborhood_size=2):
                     if new_grid[new_x, new_y] == EMPTY:
                         new_grid[new_x, new_y] = grid[x, y]
                         new_grid[x, y] = EMPTY
-
-            # Step 3: Check empty spaces for differentiation
+                
+            # Differentiation rule: check for empty spaces, excluding direct neighbors
             if grid[x, y] == EMPTY:
-                # Define the neighborhood for the current cell based on neighborhood_size
-                nearby_cells = grid[max(0, x - neighborhood_size):min(GRID_SIZE[0], x + neighborhood_size + 1), 
-                                    max(0, y - neighborhood_size):min(GRID_SIZE[1], y + neighborhood_size + 1)]
-                # Condition for melanophore differentiation (more than 2 xanthophores nearby)
-                if np.sum(nearby_cells == XANTHOPHORE) > (2 * neighborhood_size + 1) ** 2 / 2:
-                    new_grid[x, y] = MELANOPHORE
-                # Condition for xanthophore differentiation (more than 2 melanophores nearby)
-                elif np.sum(nearby_cells == MELANOPHORE) > (2 * neighborhood_size + 1) ** 2 / 2:
-                    new_grid[x, y] = XANTHOPHORE
+                # Check if the empty cell is in contact with another cell (not empty)
+                neighboring_cells = grid[max(0, x - 1):min(GRID_SIZE[0], x + 2), max(0, y - 1):min(GRID_SIZE[1], y + 2)]
+                if np.any(neighboring_cells != EMPTY):  # Only consider the empty cell if it's in contact with another cell
+                    # Select a neighborhood excluding direct neighbors and check for majority
+                    neighborhood = grid[max(0, x - differentiation_neighborhood_size):min(GRID_SIZE[0], x + differentiation_neighborhood_size + 1),
+                                        max(0, y - differentiation_neighborhood_size):min(GRID_SIZE[1], y + differentiation_neighborhood_size + 1)]
+                    # Exclude direct neighbors (1 cell distance)
+                    direct_neighbors = neighborhood[1:-1, 1:-1]  # Exclude immediate neighbors
+                    
+                    # Count the number of xanthophores and melanophores in the neighborhood (excluding direct neighbors)
+                    nearby_xanthophores = np.sum(direct_neighbors == XANTHOPHORE)
+                    nearby_melanophores = np.sum(direct_neighbors == MELANOPHORE)
+
+                    # If the majority are xanthophores, the empty cell becomes a melanophore, and vice versa
+                    if nearby_xanthophores > nearby_melanophores:
+                        new_grid[x, y] = MELANOPHORE
+                    else:
+                        new_grid[x, y] = XANTHOPHORE
                 
     return new_grid
+
 
 # Function to visualize the grid
 def plot_grid(grid):

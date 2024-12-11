@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 import os
 import random
 # Constants
-GRID_SIZE = (100, 100)  # Grid size (100x100)
+GRID_SIZE = (50, 50)  # Grid size (100x100)
 MELANOPHORE = 1  # Black stripe cells (melanophores)
 XANTHOPHORE = 2  # Yellow interstripe cells (xanthophores)
 EMPTY = 0  # Empty cells
-STEPS = 1000  # Number of simulation steps
+STEPS = 100  # Number of simulation steps
 # Length scales for cellular interactions
 DMM = 50  # Average distance between melanophores
 DXX = 36  # Average distance between xanthophores

@@ -18,12 +18,12 @@ DXX = 36  # Average distance between xanthophores
 DXM = 82  # Average distance between melanophores and xanthophores at stripe/interstripe boundaries
 
 # Morse potential parameters (example values)
-RMM = 0.1  # Repulsion strength for melanophores
-RXX = 0.1  # Repulsion strength for xanthophores
-RXM = 0.1  # Repulsion strength for melanophore and xanthophore
-AMM = 0.05  # Attraction strength for melanophores
-AXX = 0.05  # Attraction strength for xanthophores
-AXM = 0.05  # Attraction strength for melanophore and xanthophore
+RMM = 0.001  # Repulsion strength for melanophores
+RXX = 0.001  # Repulsion strength for xanthophores
+RXM = 0.001  # Repulsion strength for melanophore and xanthophore
+AMM = 0.001  # Attraction strength for melanophores
+AXX = 0.001  # Attraction strength for xanthophores
+AXM = 0.001  # Attraction strength for melanophore and xanthophore
 
 # Initialize grid with empty cells
 grid = np.zeros(GRID_SIZE, dtype=int)
@@ -37,13 +37,23 @@ def initialize_cells(grid):
     # Middle row is xanthophores
     middle_row = GRID_SIZE[0] // 2
     grid[middle_row, :] = XANTHOPHORE  # Set the middle row to xanthophores
-    grid[middle_row - 20, :] = XANTHOPHORE  # Set the middle row to xanthophores
-    grid[middle_row + 20, :] = XANTHOPHORE  # Set the middle row to xanthophores
+    grid[middle_row - 16, :] = XANTHOPHORE  # Set the middle row to xanthophores
+    grid[middle_row + 16, :] = XANTHOPHORE  # Set the middle row to xanthophores
     
     # Rows directly above and below the middle row are melanophores with gaps
-    grid[middle_row - 5, ::2] = MELANOPHORE  # Set every other cell in the row above middle row to melanophores
-    grid[middle_row + 5, ::2] = MELANOPHORE  # Set every other cell in the row below middle row to melanophores
+    grid[middle_row - 7, ::2] = MELANOPHORE  # Set every other cell in the row above middle row to melanophores
+    grid[middle_row + 7, ::2] = MELANOPHORE  # Set every other cell in the row below middle row to melanophores
     return grid
+
+# Function to initialize cells (randomly place melanophores and xanthophores)
+#def initialize_cells(grid, num_melanophores=100, num_xanthophores=100):
+#    for _ in range(num_melanophores):
+#        x, y = random.randint(0, GRID_SIZE[0]-1), random.randint(0, GRID_SIZE[1]-1)
+#        grid[x, y] = MELANOPHORE
+#    for _ in range(num_xanthophores):
+#        x, y = random.randint(0, GRID_SIZE[0]-1), random.randint(0, GRID_SIZE[1]-1)
+#        grid[x, y] = XANTHOPHORE
+#    return grid
 
 # Function to calculate the number of adjacent melanophores and xanthophores
 def count_neighbors(grid, x, y):
@@ -174,5 +184,5 @@ os.chdir(script_dir)  # Change to the script's directory
 
 # Save the animation
 writer = FFMpegWriter(fps=30, metadata={'artist': 'Benthe & Julius'}, bitrate=1800)
-file_path = os.path.join(script_dir, 'zebrafish_stripe_formation.mp4')
+file_path = os.path.join(script_dir, 'R0.001-A0.001.mp4')
 ani.save(file_path, writer=writer)

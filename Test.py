@@ -24,6 +24,16 @@ def initialize_cells(grid, num_melanophores=200, num_xanthophores=200):
         grid[x, y] = XANTHOPHORE
     return grid
 
+# Function to initialize cells (randomly place melanophores and xanthophores)
+def initialize_cells(grid, num_melanophores=200, num_xanthophores=200):
+    for _ in range(num_melanophores):
+        x, y = random.randint(0, GRID_SIZE[0]-1), random.randint(0, GRID_SIZE[1]-1)
+        grid[x, y] = MELANOPHORE
+    for _ in range(num_xanthophores):
+        x, y = random.randint(0, GRID_SIZE[0]-1), random.randint(0, GRID_SIZE[1]-1)
+        grid[x, y] = XANTHOPHORE
+    return grid
+
 # Function to calculate the number of adjacent melanophores and xanthophores
 def count_neighbors(grid, x, y):
     melanophores = 0
